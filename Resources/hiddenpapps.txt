@@ -1,0 +1,5 @@
+Microsoft.VCLibs
+Microsoft.NET
+Microsoft.WindowsStore
+Microsoft.WindowsCalculator
+Microsoft.3DBuilder
