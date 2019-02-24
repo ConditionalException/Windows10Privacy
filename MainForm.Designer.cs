@@ -77,6 +77,7 @@
             this.label1 = new System.Windows.Forms.Label();
             this.checkedListBox1 = new System.Windows.Forms.CheckedListBox();
             this.Start = new System.Windows.Forms.TabPage();
+            this.gitURL = new System.Windows.Forms.LinkLabel();
             this.label7 = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
@@ -662,6 +663,7 @@
             // 
             // Start
             // 
+            this.Start.Controls.Add(this.gitURL);
             this.Start.Controls.Add(this.label7);
             this.Start.Controls.Add(this.label5);
             this.Start.Controls.Add(this.groupBox3);
@@ -673,6 +675,18 @@
             this.Start.TabIndex = 5;
             this.Start.Text = "Main Menu";
             this.Start.UseVisualStyleBackColor = true;
+            // 
+            // gitURL
+            // 
+            this.gitURL.AutoSize = true;
+            this.gitURL.LinkBehavior = System.Windows.Forms.LinkBehavior.HoverUnderline;
+            this.gitURL.Location = new System.Drawing.Point(250, 394);
+            this.gitURL.Name = "gitURL";
+            this.gitURL.Size = new System.Drawing.Size(300, 13);
+            this.gitURL.TabIndex = 8;
+            this.gitURL.TabStop = true;
+            this.gitURL.Text = "https://github.com/ConditionalException/Windows10Privacy/";
+            this.gitURL.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.gitURL_LinkClicked);
             // 
             // label7
             // 
@@ -965,7 +979,7 @@
             // 
             this.openFileDialog1.FileName = "openFileDialog1";
             // 
-            // Form1
+            // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -973,7 +987,7 @@
             this.Controls.Add(this.tabControl1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-            this.Name = "Form1";
+            this.Name = "MainForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Windows 10 Privacy Utility";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
@@ -1076,5 +1090,6 @@
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.Button btnMinimal;
         private System.Windows.Forms.Label label9;
+        private System.Windows.Forms.LinkLabel gitURL;
     }
 }

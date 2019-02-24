@@ -127,6 +127,9 @@
          3) Apply settings to your OS using the tabs, or press "GO" to apply all of your current configuration
          4) Check out the "Tools" menu for some additional useful features</value>
   </data>
+  <metadata name="toolTip1.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+    <value>17, 17</value>
+  </metadata>
   <metadata name="saveFileDialog1.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     <value>102, 18</value>
   </metadata>

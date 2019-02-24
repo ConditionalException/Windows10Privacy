@@ -760,7 +760,7 @@ namespace WindowsFormsApp1
             }
             if (checkBox2.Checked == true)              //block telemetry
             {
-                
+
                 ServiceController service = ServiceController.GetServices().FirstOrDefault(s => s.ServiceName == "DiagTrack");
                 /* 0 = Boot * 1 = System * 2 = Automatic * 3 = Manual * 4 = Disabled */
                 if (service != null)
@@ -784,7 +784,7 @@ namespace WindowsFormsApp1
                         service.Stop();
                         service.WaitForStatus(ServiceControllerStatus.Stopped);
                     }
-                    
+
                     activeRegHKLM.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\DiagTrack", true).SetValue("Start", 4, RegistryValueKind.DWord);
                 }
             }
@@ -794,14 +794,14 @@ namespace WindowsFormsApp1
             {
                 string key = @"Software\Microsoft\Siuf";
                 string[] keyList = RegHKCU.OpenSubKey(key).GetSubKeyNames();
-                
+
                 if (keyList.Contains("Rules"))
                 {
                     string[] vals = RegHKCU.OpenSubKey(key + @"\Rules").GetValueNames();
 
                     if (vals.Contains("NumberOfSIUFInPeriod")) activeRegHKCU.OpenSubKey(key + @"\Rules", true).DeleteValue("NumberOfSIUFInPeriod");
                 }
-                
+
             }
             else
             {
@@ -910,7 +910,7 @@ namespace WindowsFormsApp1
                 checkBox2_CheckedChanged(sender, e);
                 runOncePrivCheck = false;
             }
-            
+
         }
 
         private void btnRefreshPriv_Click(object sender, EventArgs e)
@@ -2014,8 +2014,12 @@ namespace WindowsFormsApp1
             if (PAppsToRemove.Items.Count != 0) btnPUninstall_Click(sender, e);
             MessageBox.Show("All done! Check out the Tools tab for extra features.");
         }
-
         //----------------------------------------------------------SAVE/LOAD----------------------------------------------------------
+
+        private void gitURL_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            Process.Start(gitURL.Text);
+        }
 
     }
 }
