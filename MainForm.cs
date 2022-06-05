@@ -1,8 +1,6 @@
-﻿/*  Windows 10 Privacy Utility - Project 2
- *  By: Hailey Ferguson & Kyle Groleau
- *  Date: 12/2/2018
- *  
- *  Application that allows for the easy control of hidden windows functions
+﻿/*  Windows 10 Privacy Utility
+ *  Authors: Hailey Ferguson & Kyle Groleau
+ *  Contact: kyle.groleau@outlook.com
  */
 
 using System;
@@ -30,7 +28,6 @@ namespace WindowsFormsApp1
         bool isAdmin = false;
 
         List<int> checkBoxList = new List<int>();
-        List<int> minimalList = new List<int>();
         List<string> removeAppsList = new List<string>();
         List<string> removeProvisionedList = new List<string>();
         Config xmlConfig = new Config();
@@ -47,8 +44,6 @@ namespace WindowsFormsApp1
             CheckAdmin();
 
             for (int i = 0; i < 32; i++) checkBoxList.Add(0);
-            for (int i = 0; i < 32; i++) minimalList.Add(0);
-
         }
 
         private void CheckAdmin()
@@ -62,19 +57,15 @@ namespace WindowsFormsApp1
             }
         }
 
-
-
         //----------------------------------------------NON-PROVISIONED APPS-----------------------------------------------------------
-        private void btnRefresh_Click(object sender, EventArgs e)       //Refresh app listing
+        private void RefreshAppList(object sender, EventArgs e)
         {
             ListOfAppsInstalled.Items.Clear();
             powerShell.Commands.Clear();
 
             powerShell.AddCommand("get-appxpackage");
-            //PROVISIONED = Get-AppxProvisionedPackage -online |where-object {$_.displayname -match "Skype"} |Remove-AppxProvisionedPackage -online
-
             powerShell.AddCommand("Select").AddParameter("property", "name");
-            //ICollection<PSObject> obj = powerShell.Invoke();
+
             foreach (PSObject result in powerShell.Invoke())
             {
                 string current = result.ToString();
@@ -87,22 +78,19 @@ namespace WindowsFormsApp1
             foreach (string item in AppsToRemove.Items) if (item.Any(appInst.Contains)) ListOfAppsInstalled.Items.Remove(item);
 
             UpdInstallCount();
-
-
         }
 
-        private void btnUninstall_Click(object sender, EventArgs e)     //Uninstall apps in appsToRemove
+        private void UninstallApps(object sender, EventArgs e)     //Uninstall apps in appsToRemove
         {
             if (AppsToRemove.Items.Count == 0) { MessageBox.Show("No apps to uninstall"); }
             else
             {
                 Enabled = false;
                 MessageBox.Show("Uninstall will be attempted after pressing OK.\nThe application will become active when uninstall is complete.\n(This can take a while)");
-
                 MessageBox.Show(RunAppUninstaller());
 
                 AppsToRemove.Items.Clear();
-                btnRefresh_Click(null, null);
+                RefreshAppList(null, null);
                 Enabled = true;
             }
         }
@@ -112,9 +100,9 @@ namespace WindowsFormsApp1
             string success = "Successfully removed:\n";
             string failed = "Failed to remove:\n";
 
+            // TODO: This definitely doesn't need to be a new powershell invocation for each package
             foreach (var item in AppsToRemove.Items)
             {
-                //Console.WriteLine("Removing: " + item.ToString());
                 powerShell.Commands.Clear();
                 powerShell.AddCommand("Get-AppxPackage");
                 powerShell.AddArgument(item.ToString());
@@ -127,20 +115,14 @@ namespace WindowsFormsApp1
                     if (p.Activity.Contains(item.ToString()) && p.StatusDescription == "Completed")     //APP REMOVED
                     {
                         success += "\t" + item.ToString() + "\n";
-                        //Console.WriteLine("SUCCESSFULLY REMOVED: " + item.ToString());
                         break;
                     }
                     else if (p.Activity.Contains(item.ToString()) && p.StatusDescription == "Error")    //APP NOT REMOVED
                     {
                         if (!failed.Contains(item.ToString())) failed += "\t" + item.ToString() + "\n";
-                        //Console.WriteLine("REMOVAL FAILED: " + p.Activity);
                     }
-                    //else Console.WriteLine("PROG:" + p.ToString());
                 }
-
                 powerShell.Streams.Progress.Clear();
-
-                //if (powerShell.HadErrors) foreach (var p in powerShell.Streams.Error) { Console.WriteLine("\n\nERROR:\n" + p.ToString() + "\n\n"); }
             }
 
             string outputPS = "";
@@ -184,20 +166,8 @@ namespace WindowsFormsApp1
             foreach (var item in ListOfAppsInstalled.Items)
             {
                 AppsToRemove.Items.Add(item);
-                //ListOfAppsInstalled.Items.Remove(item);
             }
             ListOfAppsInstalled.Items.Clear();
-            UpdInstallCount();
-        }
-
-        private void btnMvAllLeft_Click(object sender, EventArgs e)
-        {
-            foreach (var item in AppsToRemove.Items)
-            {
-                ListOfAppsInstalled.Items.Add(item);
-                //ListOfAppsInstalled.Items.Remove(item);
-            }
-            AppsToRemove.Items.Clear();
             UpdInstallCount();
         }
 
@@ -207,100 +177,59 @@ namespace WindowsFormsApp1
             int appsrem = AppsToRemove.Items.Count;
             lblInstalledCount.Text = "Apps to keep [" + appsinst.ToString() + "]";
             lblRemoveCount.Text = "Apps to remove [" + appsrem.ToString() + "]";
-
-            if (appsinst == 0)
-                btnMvAllRight.Enabled =
-                btnMvRight.Enabled =
-                false;
-            else
-                btnMvAllRight.Enabled =
-                btnMvRight.Enabled =
-                true;
-
-            if (appsrem == 0)
-                btnMvAllLeft.Enabled =
-                btnMvLeft.Enabled =
-                btnUninstall.Enabled =
-                btnClearAppsRem.Enabled =
-                false;
-            else
-                btnMvAllLeft.Enabled =
-                btnMvLeft.Enabled =
-                btnUninstall.Enabled =
-                btnClearAppsRem.Enabled =
-                true;
-
+            btnMvAllRight.Enabled = btnMvRight.Enabled = (appsinst != 0);
+            btnMvLeft.Enabled = btnUninstall.Enabled = btnClearAppsRem.Enabled = (appsrem != 0);
         }
 
         private void ShowHiddenApps_CheckedChanged(object sender, EventArgs e)
         {
             if (ShowHiddenApps.Checked) MessageBox.Show("USING THIS CAN CAUSE IRREPARABLE DAMAGE TO YOUR OS");
-            btnRefresh_Click(sender, e);
+            RefreshAppList(sender, e);
         }
 
         private void UpdateHiddenList()
         {
-            System.IO.StreamReader Database = null; //Stream reader created as null
+            System.IO.StreamReader fileStream = null;
 
-            try                                                                  //Collect hidden apps list for non-provisioned apps
-            {   //Try to open the file
-                Database = System.IO.File.OpenText("hiddenapps.txt");
-            }
-            catch (System.IO.FileNotFoundException)                             //If it doesn't exist
+            try
             {
-                System.IO.StreamWriter sw = System.IO.File.CreateText("hiddenapps.txt");   //Create it
-                sw.Write(EmbResources.hiddenapps);                                 //Populate it with built in pre-set
-                sw.Close();                                                     //Close
+                fileStream = System.IO.File.OpenText("hiddenapps.txt");
 
-                Database = System.IO.File.OpenText("hiddenapps.txt");           //Open for reading
-
-            }
-            finally                                                             //Collect app list from file
-            {
-                if (Database.Peek() > 0)    //If it exists and is not empty
+                if (fileStream.Peek() > 0)
                 {
                     string buff;
-                    while ((buff = Database.ReadLine()) != null)
-                    {
-                        hiddenAppsList.Add(buff);
-                    }
+                    while ((buff = fileStream.ReadLine()) != null) hiddenAppsList.Add(buff);
                 };
-                Database.Close();
+                fileStream.Close();
             }
-
-            try                                                                 //Collect hidden apps list for provisioned apps
-            {   //Try to open the file
-                Database = System.IO.File.OpenText("hiddenpapps.txt");
-            }
-            catch (System.IO.FileNotFoundException)                             //If it doesn't exist
+            catch (System.IO.FileNotFoundException)
             {
-                System.IO.StreamWriter sw = System.IO.File.CreateText("hiddenpapps.txt");   //Create it
-                sw.Write(EmbResources.hiddenpapps);                                //Populate it with built in pre-set
-                sw.Close();                                                     //Close
-
-                Database = System.IO.File.OpenText("hiddenpapps.txt");          //Open for reading
-
+                foreach (string line in EmbResources.hiddenapps.Split('\n')) hiddenAppsList.Add(line.TrimEnd(new[] { '\n', '\r', ' ' }));
             }
-            finally                                                             //Collect app list from file
+
+            try
             {
-                if (Database.Peek() > 0)    //If it exists and is not empty
+                fileStream = System.IO.File.OpenText("hiddenprovisionedapps.txt");
+
+                if (fileStream.Peek() > 0)
                 {
                     string buff;
-                    while ((buff = Database.ReadLine()) != null)
-                    {
-                        hiddenPAppsList.Add(buff);
-                    }
+                    while ((buff = fileStream.ReadLine()) != null) hiddenPAppsList.Add(buff);
                 };
-                Database.Close();
+                fileStream.Close();
+            }
+            catch (System.IO.FileNotFoundException)
+            {
+                foreach (string line in EmbResources.hiddenpapps.Split('\n')) hiddenPAppsList.Add(line.TrimEnd(new[] { '\n', '\r', ' ' }));
             }
         }
 
-        private void Apps_Enter(object sender, EventArgs e)     //Refresh the apps list on tab click
+        private void Apps_Enter(object sender, EventArgs e)
         {
             //ActiveForm.Enabled = false;
             LoadingApps loading = new LoadingApps();
             loading.Show();
-            btnRefresh_Click(sender, e);
+            RefreshAppList(sender, e);
             loading.Dispose();
             //this.Enabled = true;
         }
@@ -308,15 +237,11 @@ namespace WindowsFormsApp1
         private void btnClearAppsRem_Click(object sender, EventArgs e)
         {
             AppsToRemove.Items.Clear();
-            btnRefresh_Click(sender, e);
+            RefreshAppList(sender, e);
         }
 
-        //----------------------------------------------NON-PROVISIONED APPS-----------------------------------------------------------
-
-
-
         //----------------------------------------------PROVISIONED APPS---------------------------------------------------------------
-        private void btnPRefresh_Click(object sender, EventArgs e)
+        private void RefreshProvisionedApps(object sender, EventArgs e)
         {
             PListOfAppsInstalled.Items.Clear();
             powerShell.Commands.Clear();
@@ -324,6 +249,8 @@ namespace WindowsFormsApp1
             powerShell.AddCommand("get-appxProvisionedpackage").AddParameter("online");     //Collect list
             powerShell.AddCommand("Select").AddParameter("property", "displayname");        //Filter by name
 
+
+            // TODO: This definitely doesn't need to be a new powershell instance for each removal
             foreach (PSObject result in powerShell.Invoke())                                //Run the command
             {
                 string current = result.ToString();
@@ -334,16 +261,16 @@ namespace WindowsFormsApp1
             string appInst = PListOfAppsInstalled.Items.ToString();
             foreach (string item in PAppsToRemove.Items) if (item.Any(appInst.Contains)) PListOfAppsInstalled.Items.Remove(item);   //if any of the items just collected exist in the apps to remove, remove them from the apps installed list
 
-            PUpdInstallCount();                                                                                                 //Update the counters
+            UpdateProvisionedAppCount();                                                                                                 //Update the counters
         }
 
-        private void btnPClearAppsRem_Click(object sender, EventArgs e)
+        private void ClearAllProvisionedApps(object sender, EventArgs e)
         {
             PAppsToRemove.Items.Clear();
-            btnPRefresh_Click(sender, e);
+            RefreshProvisionedApps(sender, e);
         }
 
-        private void btnPMvRight_Click(object sender, EventArgs e)
+        private void AddProvisionedAppItem(object sender, EventArgs e)
         {
             if (PListOfAppsInstalled.Items.Count != 0)
             {
@@ -353,11 +280,11 @@ namespace WindowsFormsApp1
                     PAppsToRemove.Items.Add(PListOfAppsInstalled.SelectedItem);
                     PListOfAppsInstalled.Items.Remove(PListOfAppsInstalled.SelectedItem);
                 }
-                PUpdInstallCount();
+                UpdateProvisionedAppCount();
             }
         }
 
-        private void btnPMvLeft_Click(object sender, EventArgs e)
+        private void ClearProvisionedAppItem(object sender, EventArgs e)
         {
             if (PAppsToRemove.Items.Count != 0)
             {
@@ -367,25 +294,18 @@ namespace WindowsFormsApp1
                     PListOfAppsInstalled.Items.Add(PAppsToRemove.SelectedItem);
                     PAppsToRemove.Items.Remove(PAppsToRemove.SelectedItem);
                 }
-                PUpdInstallCount();
+                UpdateProvisionedAppCount();
             }
         }
 
-        private void btnPMvAllRight_Click(object sender, EventArgs e)
+        private void AddAllProvisionedAppItem(object sender, EventArgs e)
         {
             foreach (var item in PListOfAppsInstalled.Items) PAppsToRemove.Items.Add(item);
             PListOfAppsInstalled.Items.Clear();
-            PUpdInstallCount();
+            UpdateProvisionedAppCount();
         }
 
-        private void btnPMvAllLeft_Click(object sender, EventArgs e)
-        {
-            foreach (var item in PAppsToRemove.Items) PListOfAppsInstalled.Items.Add(item);
-            PAppsToRemove.Items.Clear();
-            PUpdInstallCount();
-        }
-
-        private void btnPUninstall_Click(object sender, EventArgs e)                            // TODO: EXCEPTION THROWN WHEN REMOVING 3D.BUILDER
+        private void ProvisionedUninstallClick(object sender, EventArgs e)                            // TODO: EXCEPTION THROWN WHEN REMOVING 3D.BUILDER
         {
             if (PAppsToRemove.Items.Count == 0) { MessageBox.Show("No apps to uninstall"); }
             else
@@ -393,17 +313,17 @@ namespace WindowsFormsApp1
                 Enabled = false;
                 MessageBox.Show("Uninstall will be attempted after pressing OK.\nThe application will become active when uninstall is complete.");
 
-                RunPAppUninstaller();
+                UninstallProvisionedApps();
 
                 Enabled = true;
                 PAppsToRemove.Items.Clear();
                 MessageBox.Show("Selected Provisioned Apps have been removed.");
 
-                btnPRefresh_Click(sender, e);
+                RefreshProvisionedApps(sender, e);
             }
         }
 
-        void RunPAppUninstaller()
+        void UninstallProvisionedApps()
         {
             foreach (var item in PAppsToRemove.Items)
             {
@@ -425,13 +345,13 @@ namespace WindowsFormsApp1
              }*/
             if (powerShell.HadErrors) powerShell.Streams.Error.Clear(); //The only time this should throw errors, is if a package doesn't exist, which is not a problem
         }
-        private void ProvisionedApps_Enter(object sender, EventArgs e)
+        private void ProvisonedAppPageOpen(object sender, EventArgs e)
         {
             if (isAdmin)
             {
                 LoadingApps loading = new LoadingApps();
                 loading.Show();
-                btnPRefresh_Click(sender, e);
+                RefreshProvisionedApps(sender, e);
                 loading.Dispose();
             }
         }
@@ -439,10 +359,10 @@ namespace WindowsFormsApp1
         private void PShowHiddenApps_CheckedChanged(object sender, EventArgs e)
         {
             if (PShowHiddenApps.Checked) MessageBox.Show("USING THIS CAN CAUSE IRREPARABLE DAMAGE TO YOUR OS");
-            btnPRefresh_Click(sender, e);
+            RefreshProvisionedApps(sender, e);
         }
 
-        private void PUpdInstallCount()
+        private void UpdateProvisionedAppCount()
         {
             int appCount = PListOfAppsInstalled.Items.Count;
             int removeCount = PAppsToRemove.Items.Count;
@@ -450,18 +370,16 @@ namespace WindowsFormsApp1
             lblPRemoveCount.Text = "Apps to remove [" + removeCount.ToString() + "]";
 
             btnPMvAllRight.Enabled = btnPMvRight.Enabled = (appCount != 0);
-            btnPMvAllLeft.Enabled = btnPMvLeft.Enabled = btnPUninstall.Enabled = btnPClearAppsRem.Enabled = (removeCount != 0);
+            btnPMvLeft.Enabled = btnPUninstall.Enabled = btnPClearAppsRem.Enabled = (removeCount != 0);
         }
 
-        private void btnProvInfo_Click(object sender, EventArgs e)
+        private void ShowProvisionedAppInfo(object sender, EventArgs e)
         {
-            MessageBox.Show("Provisoned apps are applications that Windows will attempt to reinstall during updates, or when a new user account is made. \n\nIf you remove these you will have to install them manually through the Store app when making new accounts.");
+            MessageBox.Show("Provisoned apps are applications that Windows will attempt to reinstall during updates, or when a new user account is made.");
         }
-        //----------------------------------------------PROVISIONED APPS---------------------------------------------------------------
 
         //-----------------------------------------------REGISTRY/PRIVACY SYSTEM-------------------------------------------------------
-
-        private void btnApplyChanges_Click(object sender, EventArgs e)
+        private void ApplyPrivacySettings(object sender, EventArgs e)
         {
             RegistryKey RegHKLM = Registry.LocalMachine;
             if (Environment.Is64BitOperatingSystem) RegHKLM = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
@@ -1108,13 +1026,7 @@ namespace WindowsFormsApp1
 
         }
 
-
-        //-----------------------------------------------REGISTRY/PRIVACY SYSTEM-------------------------------------------------------
-
-
-
         //----------------------------------------------------------TOOLSETS-----------------------------------------------------------
-
         private void btnUninstOneDrive_Click(object sender, EventArgs e)
         {
             MessageBox.Show("OneDrive will now uninstall. This will take some time.\nApplication will be disabled until this is done.");
@@ -1325,234 +1237,31 @@ namespace WindowsFormsApp1
             }
             if (runOncePrivCheck == false) SelectButtonName();
         }
-        //----------------------------------------------------------TOOLSETS-----------------------------------------------------------
-
 
         //----------------------------------------------------------SAVE/LOAD----------------------------------------------------------
         private void btnSaveConfig_Click(object sender, EventArgs e)
         {
-            //File.Delete("saveFile.xml");
-
-            //erases the data in the save file since File.Delete does nothing
-            //File.WriteAllText("saveFile.xml", "");
-
             removeAppsList.Clear();
             removeProvisionedList.Clear();
-
-            //populates the items from the AppsToRemove textbox to the removeAppsList list
-            foreach (string item in AppsToRemove.Items)
-            {
-                removeAppsList.Add(item);
-            }
-
-            foreach (string item in PAppsToRemove.Items)
-            {
-                removeProvisionedList.Add(item);
-            }
+            foreach (string item in AppsToRemove.Items) removeAppsList.Add(item);
+            foreach (string item in PAppsToRemove.Items) removeProvisionedList.Add(item);
 
             //populates the removeTest list with the removeAppsList list
             xmlConfig.removeTest = removeAppsList;
             xmlConfig.removeProvisionedTest = removeProvisionedList;
 
-            //sets the whole checkBoxList list to 0
-            for (int i = 0; i < 32; i++)
-            {
-                checkBoxList[i] = 0;
-            }
+            // TODO: This really needs to be a JSON dump and all of the checkboxes need matching IDs so it can be completely dynamic
+            for (int i = 0; i < checkBoxList.Count; i++) checkBoxList[i] = 0;
+            for (int i = 0; i < checkedListBox1.Items.Count; i++) checkBoxList[i] = checkedListBox1.GetItemChecked(i) ? 1 : 0;
+            for (int i = 0; i < checkedListBox2.Items.Count; i++) checkBoxList[4 + i] = checkedListBox2.GetItemChecked(i) ? 1 : 0;
+            for (int i = 0; i < checkedListBox3.Items.Count; i++) checkBoxList[7 + i] = checkedListBox3.GetItemChecked(i) ? 1 : 0;
+            for (int i = 0; i < checkedListBox4.Items.Count; i++) checkBoxList[23 + i] = checkedListBox4.GetItemChecked(i) ? 1 : 0;
 
-            //checks which checkboxes are checked and saves it to the checkBoxList list
-            //privacy- general
-            for (int i = 0; i < checkedListBox1.Items.Count; i++)
-            {
-                if (checkedListBox1.GetItemChecked(i))
-                {
-                    if (i == 0)
-                    {
-                        //Advertising ID
-                        checkBoxList[0] = 1;
-                    }
-                    else if (i == 1)
-                    {
-                        //Locally relevant content
-                        checkBoxList[1] = 1;
-                    }
-                    else if (i == 2)
-                    {
-                        //suggested content in start
-                        checkBoxList[2] = 1;
-                    }
-                    else if (i == 3)
-                    {
-                        //track app launches
-                        checkBoxList[3] = 1;
-                    }
-                }
-            }
-            //privacy - notifications
-            for (int i = 0; i < checkedListBox2.Items.Count; i++)
-            {
-                if (checkedListBox2.GetItemChecked(i))
-                {
-                    if (i == 0)
-                    {
-                        //tips and tricks
-                        checkBoxList[4] = 1;
-                    }
-                    else if (i == 1)
-                    {
-                        //whats new
-                        checkBoxList[5] = 1;
-                    }
-                    else if (i == 2)
-                    {
-                        //notifications on lockscreen
-                        checkBoxList[6] = 1;
-                    }
-                }
-            }
-            //privacy - app access control
-            for (int i = 0; i < checkedListBox3.Items.Count; i++)
-            {
-                if (checkedListBox3.GetItemChecked(i))
-                {
-                    if (i == 0)
-                    {
-                        //camera
-                        checkBoxList[7] = 1;
-                    }
-                    else if (i == 1)
-                    {
-                        //microphone
-                        checkBoxList[8] = 1;
-                    }
-                    else if (i == 2)
-                    {
-                        //location services
-                        checkBoxList[9] = 1;
-                    }
-                    else if (i == 3)
-                    {
-                        //radios
-                        checkBoxList[10] = 1;
-                    }
-                    else if (i == 4)
-                    {
-                        //notifications
-                        checkBoxList[11] = 1;
-                    }
-                    else if (i == 5)
-                    {
-                        //speech and typing
-                        checkBoxList[12] = 1;
-                    }
-                    else if (i == 6)
-                    {
-                        //account into
-                        checkBoxList[13] = 1;
-                    }
-                    else if (i == 7)
-                    {
-                        //contacts
-                        checkBoxList[14] = 1;
-                    }
-                    else if (i == 8)
-                    {
-                        //calendar
-                        checkBoxList[15] = 1;
-                    }
-                    else if (i == 9)
-                    {
-                        //call history
-                        checkBoxList[16] = 1;
-                    }
-                    else if (i == 10)
-                    {
-                        //email
-                        checkBoxList[17] = 1;
-                    }
-                    else if (i == 11)
-                    {
-                        //tasks
-                        checkBoxList[18] = 1;
-                    }
-                    else if (i == 12)
-                    {
-                        //messaging (sms)
-                        checkBoxList[19] = 1;
-                    }
-                    else if (i == 13)
-                    {
-                        //unpaired communication
-                        checkBoxList[20] = 1;
-                    }
-                    else if (i == 14)
-                    {
-                        //app diagnostic information
-                        checkBoxList[21] = 1;
-                    }
-                    else if (i == 15)
-                    {
-                        //background running
-                        checkBoxList[22] = 1;
-                    }
-                }
-            }
-            //privacy - start menu
-            for (int i = 0; i < checkedListBox4.Items.Count; i++)
-            {
-                if (checkedListBox4.GetItemChecked(i))
-                {
-                    if (i == 0)
-                    {
-                        //disable cortana
-                        checkBoxList[23] = 1;
-                    }
-                    else if (i == 1)
-                    {
-                        //safe search
-                        checkBoxList[24] = 1;
-                    }
-                    else if (i == 2)
-                    {
-                        //internet seach
-                        checkBoxList[25] = 1;
-                    }
-                    else if (i == 3)
-                    {
-                        //device history
-                        checkBoxList[26] = 1;
-                    }
-                }
-            }
-
-            //feedback/diag
-            if (checkBox1.Checked == true)
-            {
-                //tailored experiences
-                checkBoxList[27] = 1;
-            }
-            if (checkBox2.Checked == true)
-            {
-                //block telemetry
-                checkBoxList[28] = 1;
-            }
-            if (checkBox3.Checked == true)
-            {
-                //ask for feedback
-                checkBoxList[29] = 1;
-            }
-
-            //telemetry report
-            if (radioButton1.Checked == true)
-            {
-                //basic telemetry report
-                checkBoxList[30] = 1;
-            }
-            else if (radioButton2.Checked == true)
-            {
-                //full telemetry report
-                checkBoxList[31] = 1;
-            }
+            checkBoxList[27] = checkBox1.Checked ? 1 : 0;
+            checkBoxList[28] = checkBox2.Checked ? 1 : 0;
+            checkBoxList[29] = checkBox3.Checked ? 1 : 0;
+            checkBoxList[30] = radioButton1.Checked ? 1 : 0;
+            checkBoxList[31] = radioButton2.Checked ? 1 : 0;
 
             //populates the checkTest list with the checkBoxList list
             xmlConfig.checkTest = checkBoxList;
@@ -1561,89 +1270,24 @@ namespace WindowsFormsApp1
             Save.Serialize(ref xmlConfig, "saveFile.xml");
 
             //open the popup that informs the user the save worked
-            Save_Load s = new Save_Load { label = "Saved settings to config file" };
-            s.ShowDialog();
+            new Save_Load { label = "Saved settings to config file" }.ShowDialog();
         }
 
         private void btnLoadConfig_Click(object sender, EventArgs e)
         {
-            UncheckAll();
-
             if (Save.Deserialize(ref xmlConfig, "saveFile.xml") == true)
             {
-                checkBoxList = xmlConfig.checkTest;
-                removeAppsList = xmlConfig.removeTest;
-                removeProvisionedList = xmlConfig.removeProvisionedTest;
-
-                AppsToRemove.Items.Clear();
-                foreach (var item in removeAppsList) AppsToRemove.Items.Add(item);
-
-                PAppsToRemove.Items.Clear();
-                foreach (var item in removeProvisionedList) PAppsToRemove.Items.Add(item);
-
-                for (int i = 0; i < 4; i++)
-                {
-                    if (checkBoxList[i] == 1)
-                    {
-                        checkedListBox1.SetItemChecked(i, true);
-                    }
-                }
-                for (int i = 4; i < 7; i++)
-                {
-                    if (checkBoxList[i] == 1)
-                    {
-                        checkedListBox2.SetItemChecked(i - 4, true);
-                    }
-                }
-                for (int i = 7; i < 23; i++)
-                {
-                    if (checkBoxList[i] == 1)
-                    {
-                        checkedListBox3.SetItemChecked(i - 7, true);
-                    }
-                }
-                for (int i = 23; i < 27; i++)
-                {
-                    if (checkBoxList[i] == 1)
-                    {
-                        checkedListBox4.SetItemChecked(i - 23, true);
-                    }
-                }
-
-                if (checkBoxList[27] == 1)
-                {
-                    checkBox1.Checked = true;
-                }
-                if (checkBoxList[28] == 1)
-                {
-                    checkBox2.Checked = true;
-                }
-                if (checkBoxList[29] == 1)
-                {
-                    checkBox3.Checked = true;
-                }
-
-                if (checkBoxList[30] == 1)
-                {
-                    radioButton1.Checked = true;
-                }
-                else if (checkBoxList[31] == 1)
-                {
-                    radioButton2.Checked = true;
-                }
-
+                parseXML();
                 (new Save_Load { label = "Successfully Loaded saved settings from config file" }).ShowDialog();
                 runOncePrivCheck = false;
             }
 
-            else
-            {
-                new Save_Load { label = "Config file could not be found" }.ShowDialog();
-            }
+            else new Save_Load { label = "Config file could not be found" }.ShowDialog();
         }
 
         private void SelectButtonName()
         {
+            // If any checkbox in the tab is not checked, use select all instead of deselect
             btnSelectAll.Text = "Deselect All";
             for (int i = 0; i < checkedListBox1.Items.Count; i++)
             {
@@ -1701,94 +1345,43 @@ namespace WindowsFormsApp1
                 {
                     xmlConfig = (Config)(serializer.Deserialize(stream));
                 }
-
-                UncheckAll();
-
-                checkBoxList = xmlConfig.checkTest;
-                removeAppsList = xmlConfig.removeTest;
-                removeProvisionedList = xmlConfig.removeProvisionedTest;
-
-                AppsToRemove.Items.Clear();
-                PAppsToRemove.Items.Clear();
-                foreach (var item in removeAppsList) AppsToRemove.Items.Add(item);
-
-                foreach (var item in removeProvisionedList) PAppsToRemove.Items.Add(item);
-
-                for (int i = 0; i < 4; i++)
-                {
-                    if (checkBoxList[i] == 1)
-                    {
-                        checkedListBox1.SetItemChecked(i, true);
-                    }
-                }
-                for (int i = 4; i < 7; i++)
-                {
-                    if (checkBoxList[i] == 1)
-                    {
-                        checkedListBox2.SetItemChecked(i - 4, true);
-                    }
-                }
-                for (int i = 7; i < 23; i++)
-                {
-                    if (checkBoxList[i] == 1)
-                    {
-                        checkedListBox3.SetItemChecked(i - 7, true);
-                    }
-                }
-                for (int i = 23; i < 27; i++)
-                {
-                    if (checkBoxList[i] == 1)
-                    {
-                        checkedListBox4.SetItemChecked(i - 23, true);
-                    }
-                }
-
-                if (checkBoxList[27] == 1)
-                {
-                    checkBox1.Checked = true;
-                }
-                if (checkBoxList[28] == 1)
-                {
-                    checkBox2.Checked = true;
-                }
-                if (checkBoxList[29] == 1)
-                {
-                    checkBox3.Checked = true;
-                }
-
-                if (checkBoxList[30] == 1)
-                {
-                    radioButton1.Checked = true;
-                }
-                else if (checkBoxList[31] == 1)
-                {
-                    radioButton2.Checked = true;
-                }
+                parseXML();
             }
         }
 
+        private void parseXML()
+        {
+            UncheckAll();
 
-        //----------------------------------------------------------SAVE/LOAD----------------------------------------------------------
+            checkBoxList = xmlConfig.checkTest;
+            removeAppsList = xmlConfig.removeTest;
+            removeProvisionedList = xmlConfig.removeProvisionedTest;
+
+            AppsToRemove.Items.Clear();
+            PAppsToRemove.Items.Clear();
+            foreach (var item in removeAppsList) AppsToRemove.Items.Add(item);
+            foreach (var item in removeProvisionedList) PAppsToRemove.Items.Add(item);
+
+            for (int i = 0; i < 4; i++) checkedListBox1.SetItemChecked(i, checkBoxList[i] == 1);
+            for (int i = 4; i < 7; i++) checkedListBox2.SetItemChecked(i - 4, checkBoxList[i] == 1);
+            for (int i = 7; i < 23; i++) checkedListBox3.SetItemChecked(i - 7, checkBoxList[i] == 1);
+            for (int i = 23; i < 27; i++) checkedListBox4.SetItemChecked(i - 23, checkBoxList[i] == 1);
+
+            checkBox1.Checked = checkBoxList[27] == 1;
+            checkBox2.Checked = checkBoxList[28] == 1;
+            checkBox3.Checked = checkBoxList[29] == 1;
+            radioButton1.Checked = checkBoxList[30] == 1;
+            radioButton2.Checked = checkBoxList[31] == 1;
+
+        }
 
         public class Config
         {
-            public List<int> checkTest
-            {
-                get;
-                set;
-            }
+            public List<int> checkTest { get; set; }
 
-            public List<string> removeTest
-            {
-                get;
-                set;
-            }
+            public List<string> removeTest { get; set; }
 
-            public List<string> removeProvisionedTest
-            {
-                get;
-                set;
-            }
+            public List<string> removeProvisionedTest { get; set; }
         }
 
         //this is the xml serializer stuff
@@ -1829,59 +1422,36 @@ namespace WindowsFormsApp1
             }
         }
 
-        private void btnRecommend_Click(object sender, EventArgs e)
+        private void LoadPresetRecommended(object sender, EventArgs e) { LoadPreset(EmbResources.RecommendedSettings); }
+
+        private void LoadPresetMinimal(object sender, EventArgs e) { LoadPreset(EmbResources.MinimalSettings); }
+
+        private void LoadPresetRemoveAll(object sender, EventArgs e) { LoadPreset(EmbResources.RemoveAllSettings); }
+
+        private void LoadPreset(string config)
         {
             runOncePrivCheck = false;
-            string tempPath = Path.GetTempPath() + @"\Win10PrivUtil-Recommended" + Guid.NewGuid() + ".xml"; //Create a temp FilePath
-            StreamWriter sW = new StreamWriter(tempPath, false, Encoding.Unicode);                          //Open a file at the path
-            sW.Write(EmbResources.RecommendedSettings);                                                        //Load data from resource into tempfile
-            sW.Close();                                                                                     //Close the file
+            string tempPath = Path.GetTempPath() + @"\Win10PrivUtil" + Guid.NewGuid() + ".xml";
+            StreamWriter writer = new StreamWriter(tempPath, false, Encoding.Unicode);
+            writer.Write(config);
+            writer.Close();
             LoadFromXml(tempPath);
             File.Delete(tempPath);
 
-            MessageBox.Show("Recommended Settings Loaded\nPress GO to apply or customize using the tabs.");
+            MessageBox.Show("Settings Loaded\nPress GO to apply or customize using the tabs.");
         }
 
-        private void btnRemAll_Click(object sender, EventArgs e)
-        {
-            runOncePrivCheck = false;
-            string tempPath = Path.GetTempPath() + @"\Win10PrivUtil-RemoveAll" + Guid.NewGuid() + ".xml";   //Create a temp FilePath
-            StreamWriter sW = new StreamWriter(tempPath, false, Encoding.Unicode);                          //Open a file at the path
-            sW.Write(EmbResources.RemoveAllSettings);                                                          //Load data from resource into tempfile
-            sW.Close();                                                                                     //Close the file
-            LoadFromXml(tempPath);
-            File.Delete(tempPath);
-
-            MessageBox.Show("Remove All Settings Loaded\n(I hope you know what you're doing)\nPress GO to apply or customize using the tabs.");
-        }
-
-        private void btnMinimal_Click(object sender, EventArgs e)
-        {
-            runOncePrivCheck = false;
-            string tempPath = Path.GetTempPath() + @"\Win10PrivUtil-RemoveAll" + Guid.NewGuid() + ".xml";   //Create a temp FilePath
-            StreamWriter sW = new StreamWriter(tempPath, false, Encoding.Unicode);                          //Open a file at the path
-            sW.Write(EmbResources.MinimalSettings);                                                            //Load data from resource into tempfile
-            sW.Close();                                                                                     //Close the file
-            LoadFromXml(tempPath);
-            File.Delete(tempPath);
-
-            MessageBox.Show("Minimal Settings Loaded\nPress GO to apply or customize using the tabs.");
-        }
-
-        private void btnAutoSet_Click(object sender, EventArgs e)
+        private void ApplyPreset(object sender, EventArgs e)
         {
             MessageBox.Show("Appling current configuration: Depending on settings, this could take some time.\nMake sure to read all prompts");
-            if (runOncePrivCheck == false) btnApplyChanges_Click(sender, e);
-            if (AppsToRemove.Items.Count != 0) btnUninstall_Click(sender, e);
-            if (PAppsToRemove.Items.Count != 0) btnPUninstall_Click(sender, e);
+            if (runOncePrivCheck == false) ApplyPrivacySettings(sender, e);
+            if (AppsToRemove.Items.Count != 0) UninstallApps(sender, e);
+            if (PAppsToRemove.Items.Count != 0) ProvisionedUninstallClick(sender, e);
             MessageBox.Show("All done! Check out the Tools tab for extra features.");
         }
         //----------------------------------------------------------SAVE/LOAD----------------------------------------------------------
 
-        private void gitURL_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
-        {
-            Process.Start(gitURL.Text);
-        }
+        private void GitLinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { Process.Start(gitURL.Text); }
 
     }
 }
