@@ -990,7 +990,6 @@
             this.Name = "MainForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Windows 10 Privacy Utility";
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             this.Tools.ResumeLayout(false);
             this.panel2.ResumeLayout(false);
             this.Apps.ResumeLayout(false);

@@ -33,7 +33,7 @@ namespace WindowsFormsApp1
         List<int> minimalList = new List<int>();
         List<string> removeAppsList = new List<string>();
         List<string> removeProvisionedList = new List<string>();
-        Config c = new Config();
+        Config xmlConfig = new Config();
 
         static WindowsIdentity ident = WindowsIdentity.GetCurrent();
         WindowsPrincipal principal = new WindowsPrincipal(ident);
@@ -385,7 +385,7 @@ namespace WindowsFormsApp1
             PUpdInstallCount();
         }
 
-        private void btnPUninstall_Click(object sender, EventArgs e)                            //EXCEPTION THROWN WHEN REMOVING 3D.BUILDER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        private void btnPUninstall_Click(object sender, EventArgs e)                            // TODO: EXCEPTION THROWN WHEN REMOVING 3D.BUILDER
         {
             if (PAppsToRemove.Items.Count == 0) { MessageBox.Show("No apps to uninstall"); }
             else
@@ -407,8 +407,6 @@ namespace WindowsFormsApp1
         {
             foreach (var item in PAppsToRemove.Items)
             {
-                //Console.WriteLine("Removing: " + item.ToString());
-
                 powerShell.Commands.Clear();
                 powerShell.AddCommand("Get-AppxProvisionedPackage").AddParameter("Online");
                 powerShell.AddCommand("Where-Object").AddParameter("FilterScript", ScriptBlock.Create("$_.displayname -match \"" + item.ToString() + "\""));
@@ -431,12 +429,10 @@ namespace WindowsFormsApp1
         {
             if (isAdmin)
             {
-                //ActiveForm.Enabled = false;
                 LoadingApps loading = new LoadingApps();
                 loading.Show();
                 btnPRefresh_Click(sender, e);
                 loading.Dispose();
-                //this.Enabled = true;
             }
         }
 
@@ -448,33 +444,13 @@ namespace WindowsFormsApp1
 
         private void PUpdInstallCount()
         {
-            int appsinst = PListOfAppsInstalled.Items.Count;
-            int appsrem = PAppsToRemove.Items.Count;
-            lblPInstalledCount.Text = "Apps to keep [" + appsinst.ToString() + "]";
-            lblPRemoveCount.Text = "Apps to remove [" + appsrem.ToString() + "]";
+            int appCount = PListOfAppsInstalled.Items.Count;
+            int removeCount = PAppsToRemove.Items.Count;
+            lblPInstalledCount.Text = "Apps to keep [" + appCount.ToString() + "]";
+            lblPRemoveCount.Text = "Apps to remove [" + removeCount.ToString() + "]";
 
-            if (appsinst == 0)
-                btnPMvAllRight.Enabled =
-                btnPMvRight.Enabled =
-                false;
-            else
-                btnPMvAllRight.Enabled =
-                btnPMvRight.Enabled =
-                true;
-
-            if (appsrem == 0)
-                btnPMvAllLeft.Enabled =
-                btnPMvLeft.Enabled =
-                btnPUninstall.Enabled =
-                btnPClearAppsRem.Enabled =
-                false;
-            else
-                btnPMvAllLeft.Enabled =
-                btnPMvLeft.Enabled =
-                btnPUninstall.Enabled =
-                btnPClearAppsRem.Enabled =
-                true;
-
+            btnPMvAllRight.Enabled = btnPMvRight.Enabled = (appCount != 0);
+            btnPMvAllLeft.Enabled = btnPMvLeft.Enabled = btnPUninstall.Enabled = btnPClearAppsRem.Enabled = (removeCount != 0);
         }
 
         private void btnProvInfo_Click(object sender, EventArgs e)
@@ -482,20 +458,6 @@ namespace WindowsFormsApp1
             MessageBox.Show("Provisoned apps are applications that Windows will attempt to reinstall during updates, or when a new user account is made. \n\nIf you remove these you will have to install them manually through the Store app when making new accounts.");
         }
         //----------------------------------------------PROVISIONED APPS---------------------------------------------------------------
-        //
-
-
-        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            /* Debug data 
-             System.IO.StreamWriter Database = new System.IO.StreamWriter("listofappsinstalled.txt"); //Open the file
-             foreach (var item in ListOfAppsInstalled.Items)
-             {
-                 Database.WriteLine(item.ToString());
-             }
-             Database.Close();
-             */
-        }
 
         //-----------------------------------------------REGISTRY/PRIVACY SYSTEM-------------------------------------------------------
 
@@ -517,55 +479,47 @@ namespace WindowsFormsApp1
                 string key = null;
                 switch (i)
                 {
-                    case 0:         //Advertising ID
+                    case 0: //Advertising ID
                         key = @"SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo\";
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key, true).SetValue("Enabled", 1, RegistryValueKind.DWord); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key, true).SetValue("Enabled", 0, RegistryValueKind.DWord); }  //Disable
+                        activeRegHKCU.OpenSubKey(key, true).SetValue("Enabled", itmChk ? 1 : 0, RegistryValueKind.DWord);
                         break;
 
-                    case 1:         //Locally relevant content
+                    case 1: //Locally relevant content
                         key = @"Control Panel\International\User Profile";
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key, true).SetValue("HttpAcceptLanguageOptOut", 0, RegistryValueKind.DWord); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key, true).SetValue("HttpAcceptLanguageOptOut", 1, RegistryValueKind.DWord); }  //Disable
+                        activeRegHKCU.OpenSubKey(key, true).SetValue("HttpAcceptLanguageOptOut", !itmChk ? 1 : 0, RegistryValueKind.DWord);
                         break;
 
                     case 2: //suggested content in start
                         key = @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager";
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key, true).SetValue("SubscribedContent-338388Enabled", 1, RegistryValueKind.DWord); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key, true).SetValue("SubscribedContent-338388Enabled", 0, RegistryValueKind.DWord); }  //Disable
+                        activeRegHKCU.OpenSubKey(key, true).SetValue("SubscribedContent-338388Enabled", itmChk ? 1 : 0, RegistryValueKind.DWord);
                         break;
 
                     case 3: //track app launches
                         key = @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced";
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key, true).SetValue("Start_TrackProgs", 1, RegistryValueKind.DWord); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key, true).SetValue("Start_TrackProgs", 0, RegistryValueKind.DWord); }  //Disable
-
+                        activeRegHKCU.OpenSubKey(key, true).SetValue("Start_TrackProgs", itmChk ? 1 : 0, RegistryValueKind.DWord);
                         break;
                 }
             }
             //privacy - notifications
             for (int i = 0; i < checkedListBox2.Items.Count; i++)
             {
-                bool itmChk = checkedListBox2.GetItemChecked(i);
+                bool isChecked = checkedListBox2.GetItemChecked(i);
                 string key = null;
                 switch (i)
                 {
                     case 0://tips and tricks
                         key = @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager";
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key, true).SetValue("SubscribedContent-338389Enabled", 1, RegistryValueKind.DWord); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key, true).SetValue("SubscribedContent-338389Enabled", 0, RegistryValueKind.DWord); }  //Disable
+                        activeRegHKCU.OpenSubKey(key, true).SetValue("SubscribedContent-338389Enabled", isChecked ? 1 : 0, RegistryValueKind.DWord);
                         break;
 
                     case 1://whats new
                         key = @"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager";
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key, true).SetValue("SubscribedContent-310093Enabled", 1, RegistryValueKind.DWord); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key, true).SetValue("SubscribedContent-310093Enabled", 0, RegistryValueKind.DWord); }  //Disable
+                        activeRegHKCU.OpenSubKey(key, true).SetValue("SubscribedContent-310093Enabled", isChecked ? 1 : 0, RegistryValueKind.DWord);
                         break;
 
                     case 2://notifications on lockscreen
                         key = @"Software\Microsoft\Windows\CurrentVersion\Notifications\Settings";
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key, true).SetValue("NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK", 1, RegistryValueKind.DWord); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key, true).SetValue("NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK", 0, RegistryValueKind.DWord); }  //Disable
+                        activeRegHKCU.OpenSubKey(key, true).SetValue("NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK", isChecked ? 1 : 0, RegistryValueKind.DWord);
                         break;
                 }
 
@@ -573,137 +527,119 @@ namespace WindowsFormsApp1
             //privacy - app access control
             for (int i = 0; i < checkedListBox3.Items.Count; i++)
             {
-                bool itmChk = checkedListBox3.GetItemChecked(i);
-                string key = @"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore";
-                string[] keyList = RegHKCU.OpenSubKey(key).GetSubKeyNames();
+                bool isChecked = checkedListBox3.GetItemChecked(i);
+                string basekey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore";
+                string[] keyList = RegHKCU.OpenSubKey(basekey).GetSubKeyNames();
                 string subkey = "";
 
                 switch (i)
                 {
                     case 0://camera
                         subkey = @"webcam";
-                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(key + @"\" + subkey);
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Allow", RegistryValueKind.String); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Deny", RegistryValueKind.String); }  //Disable
+                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(basekey + @"\" + subkey);
+                        activeRegHKCU.OpenSubKey(basekey + @"\" + subkey, true).SetValue("Value", isChecked ? "Allow" : "Deny", RegistryValueKind.String);
                         break;
 
                     case 1://microphone
                         subkey = @"microphone";
-                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(key + @"\" + subkey);
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Allow", RegistryValueKind.String); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Deny", RegistryValueKind.String); }  //Disable
+                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(basekey + @"\" + subkey);
+                        activeRegHKCU.OpenSubKey(basekey + @"\" + subkey, true).SetValue("Value", isChecked ? "Allow" : "Deny", RegistryValueKind.String);
                         break;
 
                     case 2://location services
                         subkey = @"location";
-                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(key + @"\" + subkey);
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Allow", RegistryValueKind.String); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Deny", RegistryValueKind.String); }  //Disable
+                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(basekey + @"\" + subkey);
+                        activeRegHKCU.OpenSubKey(basekey + @"\" + subkey, true).SetValue("Value", isChecked ? "Allow" : "Deny", RegistryValueKind.String);
                         break;
 
                     case 3://radios
                         subkey = @"radios";
-                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(key + @"\" + subkey);
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Allow", RegistryValueKind.String); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Deny", RegistryValueKind.String); }  //Disable
+                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(basekey + @"\" + subkey);
+                        activeRegHKCU.OpenSubKey(basekey + @"\" + subkey, true).SetValue("Value", isChecked ? "Allow" : "Deny", RegistryValueKind.String);
                         break;
 
                     case 4://notifications
                         subkey = @"userNotificationListener";
-                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(key + @"\" + subkey);
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Allow", RegistryValueKind.String); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Deny", RegistryValueKind.String); }  //Disable
+                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(basekey + @"\" + subkey);
+                        activeRegHKCU.OpenSubKey(basekey + @"\" + subkey, true).SetValue("Value", isChecked ? "Allow" : "Deny", RegistryValueKind.String);
                         break;
 
                     case 5://speech and typing
-                        key = @"Software\Microsoft";
+                        basekey = @"Software\Microsoft";
                         subkey = @"InputPersonalization";
-                        string[] keys = { "RestrictImplicitInkCollection", "RestrictImplicitTextCollection" };
-                        keyList = activeRegHKCU.OpenSubKey(key).GetSubKeyNames();
-                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(key + @"\" + subkey);
-                        foreach (string k in keys)
+                        keyList = activeRegHKCU.OpenSubKey(basekey).GetSubKeyNames();
+                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(basekey + @"\" + subkey);
+                        foreach (string key in new[] { "RestrictImplicitInkCollection", "RestrictImplicitTextCollection" })
                         {
-                            if (itmChk) { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue(k, 0, RegistryValueKind.DWord); }//Enable
-                            else { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue(k, 1, RegistryValueKind.DWord); }  //Disable
+                            activeRegHKCU.OpenSubKey(basekey + @"\" + subkey, true).SetValue(key, isChecked ? 0 : 1, RegistryValueKind.DWord);
                         }
 
-                        key += @"\" + subkey;
+                        basekey += @"\" + subkey;
                         subkey = @"TrainedDataStore";
-                        keyList = activeRegHKCU.OpenSubKey(key).GetSubKeyNames();
-                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(key + @"\" + subkey);
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("HarvestContacts", 1, RegistryValueKind.DWord); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("HarvestContacts", 0, RegistryValueKind.DWord); }  //Disable
+                        keyList = activeRegHKCU.OpenSubKey(basekey).GetSubKeyNames();
+                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(basekey + @"\" + subkey);
+                        activeRegHKCU.OpenSubKey(basekey + @"\" + subkey, true).SetValue("HarvestContacts", isChecked ? 1 : 0, RegistryValueKind.DWord);
                         break;
 
                     case 6://account into
                         subkey = @"userAccountInformation";
-                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(key + @"\" + subkey);
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Allow", RegistryValueKind.String); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Deny", RegistryValueKind.String); }  //Disable
+                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(basekey + @"\" + subkey);
+                        activeRegHKCU.OpenSubKey(basekey + @"\" + subkey, true).SetValue("Value", isChecked ? "Allow" : "Deny", RegistryValueKind.String);
                         break;
 
                     case 7://contacts
                         subkey = @"contacts";
-                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(key + @"\" + subkey);
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Allow", RegistryValueKind.String); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Deny", RegistryValueKind.String); }  //Disable
+                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(basekey + @"\" + subkey);
+                        activeRegHKCU.OpenSubKey(basekey + @"\" + subkey, true).SetValue("Value", isChecked ? "Allow" : "Deny", RegistryValueKind.String);
                         break;
 
                     case 8://calendar
                         subkey = @"appointments";
-                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(key + @"\" + subkey);
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Allow", RegistryValueKind.String); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Deny", RegistryValueKind.String); }  //Disable
+                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(basekey + @"\" + subkey);
+                        activeRegHKCU.OpenSubKey(basekey + @"\" + subkey, true).SetValue("Value", isChecked ? "Allow" : "Deny", RegistryValueKind.String);
                         break;
 
                     case 9://call history
                         subkey = @"phoneCallHistory";
-                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(key + @"\" + subkey);
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Allow", RegistryValueKind.String); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Deny", RegistryValueKind.String); }  //Disable
+                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(basekey + @"\" + subkey);
+                        activeRegHKCU.OpenSubKey(basekey + @"\" + subkey, true).SetValue("Value", isChecked ? "Allow" : "Deny", RegistryValueKind.String);
                         break;
 
                     case 10://email
                         subkey = @"email";
-                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(key + @"\" + subkey);
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Allow", RegistryValueKind.String); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Deny", RegistryValueKind.String); }  //Disable
+                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(basekey + @"\" + subkey);
+                        activeRegHKCU.OpenSubKey(basekey + @"\" + subkey, true).SetValue("Value", isChecked ? "Allow" : "Deny", RegistryValueKind.String);
                         break;
 
                     case 11://tasks
                         subkey = @"userDataTasks";
-                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(key + @"\" + subkey);
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Allow", RegistryValueKind.String); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Deny", RegistryValueKind.String); }  //Disable
+                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(basekey + @"\" + subkey);
+                        activeRegHKCU.OpenSubKey(basekey + @"\" + subkey, true).SetValue("Value", isChecked ? "Allow" : "Deny", RegistryValueKind.String);
                         break;
 
                     case 12://messaging (sms)
                         subkey = @"chat";
-                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(key + @"\" + subkey);
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Allow", RegistryValueKind.String); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Deny", RegistryValueKind.String); }  //Disable
+                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(basekey + @"\" + subkey);
+                        activeRegHKCU.OpenSubKey(basekey + @"\" + subkey, true).SetValue("Value", isChecked ? "Allow" : "Deny", RegistryValueKind.String);
                         break;
 
                     case 13://unpaired communication
                         subkey = @"bluetoothSync";
-                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(key + @"\" + subkey);
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Allow", RegistryValueKind.String); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Deny", RegistryValueKind.String); }  //Disable
+                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(basekey + @"\" + subkey);
+                        activeRegHKCU.OpenSubKey(basekey + @"\" + subkey, true).SetValue("Value", isChecked ? "Allow" : "Deny", RegistryValueKind.String);
                         break;
 
                     case 14://app diagnostic information
                         subkey = @"appDiagnostics";
-                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(key + @"\" + subkey);
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Allow", RegistryValueKind.String); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("Value", "Deny", RegistryValueKind.String); }  //Disable
+                        if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(basekey + @"\" + subkey);
+                        activeRegHKCU.OpenSubKey(basekey + @"\" + subkey, true).SetValue("Value", isChecked ? "Allow" : "Deny", RegistryValueKind.String);
                         break;
 
                     case 15://background running
-                        key = @"Software\Microsoft\Windows\CurrentVersion\";
+                        basekey = @"Software\Microsoft\Windows\CurrentVersion\";
                         subkey = @"BackgroundAccessApplications";
-                        if (!activeRegHKCU.OpenSubKey(key).GetSubKeyNames().Contains(subkey)) activeRegHKCU.CreateSubKey(key + @"\" + subkey);
-                        if (itmChk) { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("GlobalUserDisabled", 0, RegistryValueKind.DWord); }//Enable
-                        else { activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("GlobalUserDisabled", 1, RegistryValueKind.DWord); }  //Disable
+                        if (!activeRegHKCU.OpenSubKey(basekey).GetSubKeyNames().Contains(subkey)) activeRegHKCU.CreateSubKey(basekey + @"\" + subkey);
+                        activeRegHKCU.OpenSubKey(basekey + @"\" + subkey, true).SetValue("GlobalUserDisabled", isChecked ? 0 : 1, RegistryValueKind.DWord);
                         break;
                 }
             }
@@ -713,81 +649,54 @@ namespace WindowsFormsApp1
                 string key = @"SOFTWARE\Policies\Microsoft\Windows";
                 string[] keyList = RegHKLM.OpenSubKey(key).GetSubKeyNames();
                 string subkey = "";
-                bool itmChk = checkedListBox4.GetItemChecked(i);
+                bool isChecked = checkedListBox4.GetItemChecked(i);
 
                 switch (i)
                 {
                     case 0: //disable cortana
                         subkey = @"Windows Search";
                         if (!keyList.Contains(subkey)) activeRegHKLM.CreateSubKey(key + @"\" + subkey);
-                        if (itmChk) { activeRegHKLM.OpenSubKey(key + @"\" + subkey, true).SetValue("AllowCortana", 1, RegistryValueKind.DWord); }//Enable
-                        else { activeRegHKLM.OpenSubKey(key + @"\" + subkey, true).SetValue("AllowCortana", 0, RegistryValueKind.DWord); }  //Disable
+                        activeRegHKLM.OpenSubKey(key + @"\" + subkey, true).SetValue("AllowCortana", isChecked ? 1 : 0, RegistryValueKind.DWord);
                         break;
 
                     case 1: //safe search
                         subkey = @"Windows Search";
                         if (!keyList.Contains(subkey)) activeRegHKLM.CreateSubKey(key + @"\" + subkey);
-                        if (itmChk) { activeRegHKLM.OpenSubKey(key + @"\" + subkey, true).SetValue("ConnectedSearchSafeSearch", 1, RegistryValueKind.DWord); }//Enable
-                        else { activeRegHKLM.OpenSubKey(key + @"\" + subkey, true).SetValue("ConnectedSearchSafeSearch", 3, RegistryValueKind.DWord); }  //Disable
+                        activeRegHKLM.OpenSubKey(key + @"\" + subkey, true).SetValue("ConnectedSearchSafeSearch", isChecked ? 1 : 3, RegistryValueKind.DWord);
                         break;
 
                     case 2: //internet seach
                         subkey = @"Windows Search";
                         if (!keyList.Contains(subkey)) activeRegHKLM.CreateSubKey(key + @"\" + subkey);
-                        if (itmChk) { activeRegHKLM.OpenSubKey(key + @"\" + subkey, true).SetValue("ConnectedSearchUseWeb", 1, RegistryValueKind.DWord); }//Enable
-                        else { activeRegHKLM.OpenSubKey(key + @"\" + subkey, true).SetValue("ConnectedSearchUseWeb", 0, RegistryValueKind.DWord); }  //Disable
+                        activeRegHKLM.OpenSubKey(key + @"\" + subkey, true).SetValue("ConnectedSearchUseWeb", isChecked ? 1 : 0, RegistryValueKind.DWord);
                         break;
 
                     case 3: //device history
                         subkey = @"Windows Search";
                         if (!keyList.Contains(subkey)) activeRegHKLM.CreateSubKey(key + @"\" + subkey);
-                        if (itmChk) { activeRegHKLM.OpenSubKey(key + @"\" + subkey, true).SetValue("DeviceHistoryEnabled", 1, RegistryValueKind.DWord); }//Enable
-                        else { activeRegHKLM.OpenSubKey(key + @"\" + subkey, true).SetValue("DeviceHistoryEnabled", 0, RegistryValueKind.DWord); }  //Disable
+                        activeRegHKLM.OpenSubKey(key + @"\" + subkey, true).SetValue("DeviceHistoryEnabled", isChecked ? 1 : 0, RegistryValueKind.DWord);
                         break;
                 }
 
             }
             //Telemtry ====================================================================================================================================================
-            if (checkBox1.Checked == true)//tailored experiences
-            {
-                string key = @"Software\Microsoft\Windows\CurrentVersion\Privacy";
-                activeRegHKCU.OpenSubKey(key, true).SetValue("TailoredExperiencesWithDiagnosticDataEnabled", 1, RegistryValueKind.DWord); //Enabled
-            }
-            else
-            {
-                string key = @"Software\Microsoft\Windows\CurrentVersion\Privacy";
-                activeRegHKCU.OpenSubKey(key, true).SetValue("TailoredExperiencesWithDiagnosticDataEnabled", 0, RegistryValueKind.DWord); //Disabled
-            }
-            if (checkBox2.Checked == true)              //block telemetry
-            {
+            //tailored experiences
+            activeRegHKCU.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Privacy", true).SetValue("TailoredExperiencesWithDiagnosticDataEnabled", checkBox1.Checked ? 1 : 0, RegistryValueKind.DWord); //Enabled
 
-                ServiceController service = ServiceController.GetServices().FirstOrDefault(s => s.ServiceName == "DiagTrack");
-                /* 0 = Boot * 1 = System * 2 = Automatic * 3 = Manual * 4 = Disabled */
-                if (service != null)
-                {
-                    if (service.Status != ServiceControllerStatus.Stopped)
-                    {
-                        service.Stop();
-                        service.WaitForStatus(ServiceControllerStatus.Stopped);
-                    }
-                    activeRegHKLM.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\DiagTrack", true).SetValue("Start", 2, RegistryValueKind.DWord);
-                    service.Start();
-                }
-            }
-            else
+            //block telemetry
+            ServiceController service = ServiceController.GetServices().FirstOrDefault(s => s.ServiceName == "DiagTrack");
+            /* 0 = Boot * 1 = System * 2 = Automatic * 3 = Manual * 4 = Disabled */
+            if (service != null)
             {
-                ServiceController service = ServiceController.GetServices().FirstOrDefault(s => s.ServiceName == "DiagTrack");
-                if (service != null)
+                if (service.Status != ServiceControllerStatus.Stopped)
                 {
-                    if (service.Status != ServiceControllerStatus.Stopped)
-                    {
-                        service.Stop();
-                        service.WaitForStatus(ServiceControllerStatus.Stopped);
-                    }
-
-                    activeRegHKLM.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\DiagTrack", true).SetValue("Start", 4, RegistryValueKind.DWord);
+                    service.Stop();
+                    service.WaitForStatus(ServiceControllerStatus.Stopped);
                 }
+                activeRegHKLM.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\DiagTrack", true).SetValue("Start", checkBox2.Checked ? 2 : 4, RegistryValueKind.DWord);
+                if (checkBox2.Checked) service.Start();
             }
+
             if (RegHKCU.OpenSubKey(@"Software\Microsoft\Siuf") == null) activeRegHKCU.CreateSubKey(@"Software\Microsoft\Siuf");
 
             if (checkBox3.Checked == true)              //ask for feedback
@@ -813,31 +722,24 @@ namespace WindowsFormsApp1
                 activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("NumberOfSIUFInPeriod", 0, RegistryValueKind.DWord); //Don't ask for feedback
             }
 
-
-            //telemetry report
-            if (radioButton1.Checked == true)//basic telemetry report
-            {
-                string key = @"SOFTWARE\Policies\Microsoft\Windows";
-                string[] keyList = RegHKCU.OpenSubKey(key).GetSubKeyNames();
-                string subkey = "DataCollection";
-
-                if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(key + @"\" + subkey);
-                activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("AllowTelemetry", 1, RegistryValueKind.DWord); //Basic feedback ("Off")
-            }
-
-            else if (radioButton2.Checked == true)//full telemetry report
-            {
-                string key = @"SOFTWARE\Policies\Microsoft\Windows";
-                string[] keyList = RegHKCU.OpenSubKey(key).GetSubKeyNames();
-                string subkey = "DataCollection";
-
-                if (!keyList.Contains(subkey)) activeRegHKCU.CreateSubKey(key + @"\" + subkey);
-                activeRegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("AllowTelemetry", 3, RegistryValueKind.DWord); //Full feedback ("On")
-            }
-
+            HandleTelemetryReport();
 
             MessageBox.Show("Privacy settings have been saved to OS!\n(if anything has reset itself, it means the operation failed)");
             btnRefreshPriv_Click(sender, e);
+        }
+
+        private void HandleTelemetryReport()
+        {
+            RegistryKey RegHKCU = Registry.CurrentUser;
+            if (Environment.Is64BitOperatingSystem) RegHKCU = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Registry64);
+
+            //telemetry report
+            string key = @"SOFTWARE\Policies\Microsoft\Windows";
+            string[] keyList = RegHKCU.OpenSubKey(key).GetSubKeyNames();
+            string subkey = "DataCollection";
+
+            if (!keyList.Contains(subkey)) RegHKCU.CreateSubKey(key + @"\" + subkey);
+            RegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("AllowTelemetry", radioButton1.Checked ? 1 : 3, RegistryValueKind.DWord);
         }
 
         private void btnSelectAll_Click(object sender, EventArgs e)
@@ -1233,6 +1135,7 @@ namespace WindowsFormsApp1
             proc.Start();
 
             btnUninstOneDrive.Enabled = false;
+            proc.WaitForExit();
             /*  //This section is supposed to take ownership of onedrive folder, and delete it, but it's not working quite right yet
             string odDirect = Environment.GetEnvironmentVariable("USERPROFILE") + @"\OneDrive\";
             if (System.IO.Directory.Exists(odDirect))
@@ -1244,7 +1147,6 @@ namespace WindowsFormsApp1
                 //            System.IO.Directory.SetAccessControl(odDirect, );
                 System.IO.Directory.Delete(odDirect);
             }*/
-            proc.WaitForExit();
             Enabled = true;
             MessageBox.Show("Onedrive has been uninstalled.");
         }
@@ -1279,7 +1181,7 @@ namespace WindowsFormsApp1
             sW.Write(resource);                                                                         //Load data from resource into Win10Photo(#).reg
             sW.Close();                                                                                 //Close the file
 
-            proc.StartInfo.FileName = "REG";                                                            //REG IMPORT Win10Photo(#).reg (/reg:65)
+            proc.StartInfo.FileName = "REG";                                                            //REG IMPORT Win10Photo(#).reg (/reg:64)
             proc.StartInfo.Arguments = "IMPORT \"" + tempPath + "\"";
             if (Environment.Is64BitOperatingSystem) proc.StartInfo.Arguments += " /reg:64";             //This is needed, otherwise windows places registry keys in the wrong place
 
@@ -1309,8 +1211,7 @@ namespace WindowsFormsApp1
                         if ((string)btnUninstEdge.Tag == "D")                                                                       //If edge is tagged as disabled then enable it
                         {
                             File.GetAccessControl(path).SetOwner(new NTAccount(Environment.UserDomainName, Environment.UserName));  //Set file permissions
-                            string newPath = path.Remove((path.LastIndexOf("_DISABLED")));                                          //Trim path to remove _DISABLED
-                                                                                                                                    //MessageBox.Show(path + "\n\n" + newPath);                                                             //ERROR PRINT
+                            string newPath = path.Remove((path.LastIndexOf("_DISABLED")));                                          //Trim path to remove _DISABLED                                                    //ERROR PRINT
                             Directory.Move(path, newPath);                                                                          //Apply changes
                             MessageBox.Show("Edge Browser has been Enabled!");                                                      //Inform user
                             btnUninstEdge.Tag = "";                                                                                 //Update UI
@@ -1450,8 +1351,8 @@ namespace WindowsFormsApp1
             }
 
             //populates the removeTest list with the removeAppsList list
-            c.removeTest = removeAppsList;
-            c.removeProvisionedTest = removeProvisionedList;
+            xmlConfig.removeTest = removeAppsList;
+            xmlConfig.removeProvisionedTest = removeProvisionedList;
 
             //sets the whole checkBoxList list to 0
             for (int i = 0; i < 32; i++)
@@ -1654,31 +1555,25 @@ namespace WindowsFormsApp1
             }
 
             //populates the checkTest list with the checkBoxList list
-            c.checkTest = checkBoxList;
-
-            //Save.Serialize(checkBoxList, "saveFile.xml");
-            //Config c = new Config();
+            xmlConfig.checkTest = checkBoxList;
 
             //serialize the c object (holds the checkTest and removeTest lists)
-            Save.Serialize(ref c, "saveFile.xml");
+            Save.Serialize(ref xmlConfig, "saveFile.xml");
 
             //open the popup that informs the user the save worked
-            Save_Load s = new Save_Load();
-            s.label = "Saved settings to config file";
+            Save_Load s = new Save_Load { label = "Saved settings to config file" };
             s.ShowDialog();
         }
 
         private void btnLoadConfig_Click(object sender, EventArgs e)
         {
-            //if (File.Exists("saveFile.xml") == true)
-            //{
             UncheckAll();
 
-            if (Save.Deserialize(ref c/*checkBoxList*/, "saveFile.xml") == true)
+            if (Save.Deserialize(ref xmlConfig, "saveFile.xml") == true)
             {
-                checkBoxList = c.checkTest;
-                removeAppsList = c.removeTest;
-                removeProvisionedList = c.removeProvisionedTest;
+                checkBoxList = xmlConfig.checkTest;
+                removeAppsList = xmlConfig.removeTest;
+                removeProvisionedList = xmlConfig.removeProvisionedTest;
 
                 AppsToRemove.Items.Clear();
                 foreach (var item in removeAppsList) AppsToRemove.Items.Add(item);
@@ -1737,17 +1632,13 @@ namespace WindowsFormsApp1
                     radioButton2.Checked = true;
                 }
 
-                Save_Load l = new Save_Load();
-                l.label = "Successfully Loaded saved settings from config file";
-                l.ShowDialog();
+                (new Save_Load { label = "Successfully Loaded saved settings from config file" }).ShowDialog();
                 runOncePrivCheck = false;
             }
 
             else
             {
-                Save_Load l = new Save_Load();
-                l.label = "Config file could not be found";
-                l.ShowDialog();
+                new Save_Load { label = "Config file could not be found" }.ShowDialog();
             }
         }
 
@@ -1784,7 +1675,6 @@ namespace WindowsFormsApp1
             }
 
             if (btnSelectAll.Text == "Deselect All") btnSelectAll.Text = "Select All";
-            //else btnSelectAll.Text = "Deselect All";
 
             if (checkBox1.Checked == false) btnSelectAll.Text = "Select All";
             if (checkBox2.Checked == false) btnSelectAll.Text = "Select All";
@@ -1809,14 +1699,14 @@ namespace WindowsFormsApp1
                 var serializer = new XmlSerializer(typeof(Config));
                 using (var stream = File.OpenRead(name))
                 {
-                    c = (Config)(serializer.Deserialize(stream));
+                    xmlConfig = (Config)(serializer.Deserialize(stream));
                 }
 
                 UncheckAll();
 
-                checkBoxList = c.checkTest;
-                removeAppsList = c.removeTest;
-                removeProvisionedList = c.removeProvisionedTest;
+                checkBoxList = xmlConfig.checkTest;
+                removeAppsList = xmlConfig.removeTest;
+                removeProvisionedList = xmlConfig.removeProvisionedTest;
 
                 AppsToRemove.Items.Clear();
                 PAppsToRemove.Items.Clear();
@@ -1904,10 +1794,9 @@ namespace WindowsFormsApp1
         //this is the xml serializer stuff
         public static class Save
         {
-            public static void Serialize(ref Config c/*this List<int> list*/, string name)
+            public static void Serialize(ref Config c, string name)
             {
-                SaveFileDialog saveFileDialog1 = new SaveFileDialog();
-                saveFileDialog1.Filter = "XML-File | *.xml";
+                SaveFileDialog saveFileDialog1 = new SaveFileDialog { Filter = "XML-File | *.xml" };
 
                 if (saveFileDialog1.ShowDialog() == DialogResult.OK)
                 {
@@ -1917,26 +1806,15 @@ namespace WindowsFormsApp1
                         var serializer = new XmlSerializer(typeof(Config));
                         using (var stream = File.OpenWrite(saveFileDialog1.FileName))
                         {
-
-                            //serializer.Serialize(stream,)
                             serializer.Serialize(stream, c);
                         }
                     }
                 }
-
-                //var serializer = new XmlSerializer(typeof(List<int>));
-
-                //var serializer = new XmlSerializer(typeof(Config));
-                //using (var stream = File.OpenWrite(name))
-                //{
-                //   serializer.Serialize(stream, c /*list*/);
-                //}
             }
 
-            public static bool Deserialize(ref Config c /*this List<int> list*/, string name)
+            public static bool Deserialize(ref Config c, string name)
             {
-                OpenFileDialog openFileDialog1 = new OpenFileDialog();
-                openFileDialog1.Filter = "XML-File | *.xml";
+                OpenFileDialog openFileDialog1 = new OpenFileDialog { Filter = "XML-File | *.xml" };
 
                 if (openFileDialog1.ShowDialog() == DialogResult.OK)
                 {
@@ -1948,22 +1826,6 @@ namespace WindowsFormsApp1
                     return true;
                 }
                 return false;
-
-                /*
-                if (File.Exists("saveFile.xml") == true)
-                {
-                    //var serializer = new XmlSerializer(typeof(List<int>));
-                    var serializer = new XmlSerializer(typeof(Config));
-                    using (var stream = File.OpenRead(name))
-                    {
-                        c = (Config)(serializer.Deserialize(stream));
-
-
-                        //list.Clear();
-                        //list.AddRange(other);
-                    }
-                }
-                */
             }
         }
 
