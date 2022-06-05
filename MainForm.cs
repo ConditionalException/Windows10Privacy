@@ -86,40 +86,29 @@ namespace WindowsFormsApp1
 
         string RunAppUninstaller()
         {
-            string success = "Successfully removed:\n";
-            string failed = "Failed to remove:\n";
+            // Create comma separated list with items wrapped in quotation marks
+            string appfilter = "$_.Name -in " + string.Join(",", AppsToRemove.Items.Cast<string>().ToArray().Select(x => string.Format("\"{0}\"", x)));
 
-            // TODO: This definitely doesn't need to be a new powershell invocation for each package
-            foreach (var item in AppsToRemove.Items)
-            {
                 powerShell.Commands.Clear();
                 powerShell.AddCommand("Get-AppxPackage");
-                powerShell.AddArgument(item.ToString());
+            powerShell.AddCommand("Where-Object").AddParameter("FilterScript", ScriptBlock.Create(appfilter));
                 powerShell.AddCommand("remove-appxpackage");
 
                 List<PSObject> psOut = new List<PSObject>(powerShell.Invoke());
 
-                foreach (var p in powerShell.Streams.Progress)
+            HashSet<string> successful = new HashSet<string>();
+            HashSet<string> failed = new HashSet<string>();
+            foreach (ProgressRecord p in powerShell.Streams.Progress)
                 {
-                    if (p.Activity.Contains(item.ToString()) && p.StatusDescription == "Completed")     //APP REMOVED
-                    {
-                        success += "\t" + item.ToString() + "\n";
-                        break;
-                    }
-                    else if (p.Activity.Contains(item.ToString()) && p.StatusDescription == "Error")    //APP NOT REMOVED
-                    {
-                        if (!failed.Contains(item.ToString())) failed += "\t" + item.ToString() + "\n";
-                    }
-                }
-                powerShell.Streams.Progress.Clear();
+                if (p.StatusDescription.ToLower().Trim() == "error") failed.Add(p.Activity.Split(':').Last().Trim());
+                if (p.StatusDescription.ToLower().Trim() == "complete") successful.Add(p.Activity.Split(':').Last().Trim());
             }
 
-            string outputPS = "";
-            if (powerShell.HadErrors) { outputPS = success + "\n" + failed; powerShell.Streams.Error.Clear(); }
-            else { outputPS = success; }
+            string outputPS = $"Successfully removed all {AppsToRemove.Items.Count} packages.";
+            if (powerShell.HadErrors) outputPS = $"Successfully removed [{successful.Count}]\nFailed to remove [{failed.Count}]:\n\t{string.Join("\n\t", failed.ToArray())}";
+            powerShell.Streams.ClearStreams();
 
             return outputPS;
-
         }
 
         private void btnMvRight_Click(object sender, EventArgs e)
@@ -311,25 +300,16 @@ namespace WindowsFormsApp1
 
         void UninstallProvisionedApps()
         {
-            foreach (var item in PAppsToRemove.Items)
-            {
+            // Create comma separated list with items wrapped in quotation marks
+            string appfilter = "$_.DisplayName -in " + string.Join(",", PAppsToRemove.Items.Cast<string>().ToArray().Select(x => string.Format("\"{0}\"", x)));
+
                 powerShell.Commands.Clear();
                 powerShell.AddCommand("Get-AppxProvisionedPackage").AddParameter("Online");
-                powerShell.AddCommand("Where-Object").AddParameter("FilterScript", ScriptBlock.Create("$_.displayname -match \"" + item.ToString() + "\""));
-
+            powerShell.AddCommand("Where-Object").AddParameter("FilterScript", ScriptBlock.Create(appfilter));
                 powerShell.AddCommand("remove-appxProvisionedpackage").AddParameter("Online");
+            powerShell.Invoke();
 
-                List<PSObject> psOut = new List<PSObject>(powerShell.Invoke());
-            }
-            /* if (powerShell.HadErrors)
-             {
-                 string fail = "Provisioned App removal failed for the following:\n";
-                 btnPRefresh_Click(sender, e);
-                 foreach (string i in PAppsToRemove.Items) if (PListOfAppsInstalled.Items.Contains(i)) fail += i + "\n";
-                 MessageBox.Show(fail);
-                 powerShell.Streams.Error.Clear();
-             }*/
-            if (powerShell.HadErrors) powerShell.Streams.Error.Clear(); //The only time this should throw errors, is if a package doesn't exist, which is not a problem
+            powerShell.Streams.ClearStreams();
         }
         private void ProvisonedAppPageOpen(object sender, EventArgs e)
         {
