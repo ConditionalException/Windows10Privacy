@@ -996,7 +996,7 @@ namespace WindowsFormsApp1
         {
             MessageBox.Show("OneDrive will now uninstall. This will take some time.\nApplication will be disabled until this is done.");
             Enabled = false;
-            System.Diagnostics.Process proc = new System.Diagnostics.Process();
+            Process proc = new Process();
             proc.StartInfo.CreateNoWindow = true;
             proc.StartInfo.RedirectStandardError = true;
             proc.StartInfo.RedirectStandardOutput = true;
@@ -1013,17 +1013,21 @@ namespace WindowsFormsApp1
 
             btnUninstOneDrive.Enabled = false;
             proc.WaitForExit();
-            /*  //This section is supposed to take ownership of onedrive folder, and delete it, but it's not working quite right yet
-            string odDirect = Environment.GetEnvironmentVariable("USERPROFILE") + @"\OneDrive\";
-            if (System.IO.Directory.Exists(odDirect))
-            {
-                System.IO.FileInfo fileInfo = new System.IO.FileInfo(odDirect);
-                System.Security.AccessControl.FileSecurity fileSecurity = fileInfo.GetAccessControl();
-                fileSecurity.SetOwner(ident.User);
 
-                //            System.IO.Directory.SetAccessControl(odDirect, );
-                System.IO.Directory.Delete(odDirect);
-            }*/
+            string oneDriveDirectory = Environment.GetEnvironmentVariable("USERPROFILE") + @"\OneDrive\";
+            if (Directory.Exists(oneDriveDirectory))
+            {
+                try
+                {
+                    File.SetAttributes(oneDriveDirectory, FileAttributes.Normal);
+                    Directory.Delete(oneDriveDirectory);
+                }
+                catch (IOException ex)
+                {
+                    MessageBox.Show($"Failed to delete the OneDrive folder located at {oneDriveDirectory} Exception:{ex}");
+                }
+
+            }
             Enabled = true;
             MessageBox.Show("Onedrive has been uninstalled.");
         }
