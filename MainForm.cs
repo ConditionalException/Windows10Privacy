@@ -3,20 +3,19 @@
  *  Contact: kyle.groleau@outlook.com
  */
 
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-using System.Management.Automation;
-using System.Text.RegularExpressions;
-using System.Security.Principal;
-using System.IO;
-using System.Xml.Serialization;
-using Microsoft.Win32;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Management.Automation;
+using System.Security.Principal;
 using System.ServiceProcess;
-
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Windows.Forms;
+using System.Xml.Serialization;
 
 namespace WindowsFormsApp1
 {
@@ -609,7 +608,7 @@ namespace WindowsFormsApp1
             HandleTelemetryReport();
 
             MessageBox.Show("Privacy settings have been saved to OS!\n(if anything has reset itself, it means the operation failed)");
-            btnRefreshPriv_Click(sender, e);
+            RefreshPrivacySettings(sender, e);
         }
 
         private void HandleTelemetryReport()
@@ -626,7 +625,7 @@ namespace WindowsFormsApp1
             RegHKCU.OpenSubKey(key + @"\" + subkey, true).SetValue("AllowTelemetry", radioButton1.Checked ? 1 : 3, RegistryValueKind.DWord);
         }
 
-        private void btnSelectAll_Click(object sender, EventArgs e)
+        private void SelectAll(object sender, EventArgs e)
         {
             //selects all the checkboxes if "select all" button is pressed
             if (btnSelectAll.Text == "Select All")
@@ -692,14 +691,14 @@ namespace WindowsFormsApp1
         {
             if (runOncePrivCheck)
             {
-                btnRefreshPriv_Click(sender, e);
+                RefreshPrivacySettings(sender, e);
                 checkBox2_CheckedChanged(sender, e);
                 runOncePrivCheck = false;
             }
 
         }
 
-        private void btnRefreshPriv_Click(object sender, EventArgs e)
+        private void RefreshPrivacySettings(object sender, EventArgs e)
         {
             UncheckAll();
             string[] sc = null;
@@ -993,7 +992,7 @@ namespace WindowsFormsApp1
         }
 
         //----------------------------------------------------------TOOLSETS-----------------------------------------------------------
-        private void btnUninstOneDrive_Click(object sender, EventArgs e)
+        private void UninstallOneDrive(object sender, EventArgs e)
         {
             MessageBox.Show("OneDrive will now uninstall. This will take some time.\nApplication will be disabled until this is done.");
             Enabled = false;
@@ -1029,46 +1028,48 @@ namespace WindowsFormsApp1
             MessageBox.Show("Onedrive has been uninstalled.");
         }
 
-        private void btnResPhotoV_Click(object sender, EventArgs e)     //This uses a script provided by https://www.tenforums.com/tutorials/14312-restore-windows-photo-viewer-windows-10-a.html
+        private void RestorePhotoViewer(object sender, EventArgs e)
+        //This uses a script provided by https://www.tenforums.com/tutorials/14312-restore-windows-photo-viewer-windows-10-a.html
         {
             ApplyRegistry(EmbResources.Restore_Windows_Photo_Viewer_ALL_USERS);
 
-            MessageBox.Show("Windows Photo Viewer has been restored!\nDon't forget to set it to your default photo application through the settings app.\n\n" +
+            MessageBox.Show("Windows Photo Viewer has been restored!\nDon't forget to set your default photo application through the settings app.\n\n" +
                 "Registry file by: Shawn Brink \nhttps://www.tenforums.com/tutorials/14312-restore-windows-photo-viewer-windows-10-a.html");
         }
 
-        private void btnUnPhotoV_Click(object sender, EventArgs e)
+        private void UninstallPhotoViewer(object sender, EventArgs e)
         {
             ApplyRegistry(EmbResources.Undo_Restore_Windows_Photo_Viewer_ALL_USERS);
 
-            MessageBox.Show("Windows Photo Viewer has been removed!\nDon't forget to set it to your default photo application through the settings app.\n\n" +
+            MessageBox.Show("Windows Photo Viewer has been removed!\nDon't forget to set your default photo application through the settings app.\n\n" +
                 "Registry file by: Shawn Brink \nhttps://www.tenforums.com/tutorials/14312-restore-windows-photo-viewer-windows-10-a.html");
         }
 
-        void ApplyRegistry(string resource)                                                             //Apply registry file (from resource) to windows
-        {                                                                                               //This is really only used for "Windows Photo Viewer"
-            System.Diagnostics.Process proc = new System.Diagnostics.Process();                         //An external process is created
+        void ApplyRegistry(string registryContents)
+        {
+            Process proc = new Process();
 
-            proc.StartInfo.CreateNoWindow = true;                                                       //We don't want a command prompt to pop up
-            proc.StartInfo.RedirectStandardError = true;                                                //We won't need feedback for this
+            proc.StartInfo.CreateNoWindow = true;
+            proc.StartInfo.RedirectStandardError = true;
             proc.StartInfo.RedirectStandardOutput = true;
             proc.StartInfo.UseShellExecute = false;
 
-            string tempPath = System.IO.Path.GetTempPath() + @"\Win10Photo" + Guid.NewGuid() + ".reg";  //Create a temp FilePath
-            System.IO.StreamWriter sW = new System.IO.StreamWriter(tempPath, false, Encoding.Unicode);  //Open a file at the path
-            sW.Write(resource);                                                                         //Load data from resource into Win10Photo(#).reg
-            sW.Close();                                                                                 //Close the file
+            string tempPath = Path.GetTempPath() + @"\Win10Photo" + Guid.NewGuid() + ".reg";
+            StreamWriter sW = new StreamWriter(tempPath, false, Encoding.Unicode);
+            sW.Write(registryContents);
+            sW.Close();
 
-            proc.StartInfo.FileName = "REG";                                                            //REG IMPORT Win10Photo(#).reg (/reg:64)
+            proc.StartInfo.FileName = "REG";
             proc.StartInfo.Arguments = "IMPORT \"" + tempPath + "\"";
-            if (Environment.Is64BitOperatingSystem) proc.StartInfo.Arguments += " /reg:64";             //This is needed, otherwise windows places registry keys in the wrong place
+            if (Environment.Is64BitOperatingSystem) proc.StartInfo.Arguments += " /reg:64";
 
-            proc.Start();                                                                               //Execute command
+            proc.Start();
             proc.WaitForExit();
-            System.IO.File.Delete(tempPath);                                                            //Delete the file
+            File.Delete(tempPath);
         }
 
-        private void btnUninstEdge_Click(object sender, EventArgs e)                                    //Disable edge browser by moving its core files from * to *_DISABLED
+        private void UninstallEdge(object sender, EventArgs e)
+        //Disable edge browser by moving its core files from * to *_DISABLED
         {
             Enabled = false;
 
@@ -1089,7 +1090,7 @@ namespace WindowsFormsApp1
                         if ((string)btnUninstEdge.Tag == "D")                                                                       //If edge is tagged as disabled then enable it
                         {
                             File.GetAccessControl(path).SetOwner(new NTAccount(Environment.UserDomainName, Environment.UserName));  //Set file permissions
-                            string newPath = path.Remove((path.LastIndexOf("_DISABLED")));                                          //Trim path to remove _DISABLED                                                    //ERROR PRINT
+                            string newPath = path.Remove((path.LastIndexOf("_DISABLED")));                                          //Trim path to remove _DISABLED
                             Directory.Move(path, newPath);                                                                          //Apply changes
                             MessageBox.Show("Edge Browser has been Enabled!");                                                      //Inform user
                             btnUninstEdge.Tag = "";                                                                                 //Update UI
@@ -1243,7 +1244,7 @@ namespace WindowsFormsApp1
         {
             if (Save.Deserialize(ref xmlConfig, "saveFile.xml") == true)
             {
-                parseXML();
+                ParseXML();
                 (new Save_Load { label = "Successfully Loaded saved settings from config file" }).ShowDialog();
                 runOncePrivCheck = false;
             }
@@ -1311,11 +1312,11 @@ namespace WindowsFormsApp1
                 {
                     xmlConfig = (Config)(serializer.Deserialize(stream));
                 }
-                parseXML();
+                ParseXML();
             }
         }
 
-        private void parseXML()
+        private void ParseXML()
         {
             UncheckAll();
 
@@ -1418,6 +1419,5 @@ namespace WindowsFormsApp1
         //----------------------------------------------------------SAVE/LOAD----------------------------------------------------------
 
         private void GitLinkClicked(object sender, LinkLabelLinkClickedEventArgs e) { Process.Start(gitURL.Text); }
-
     }
 }

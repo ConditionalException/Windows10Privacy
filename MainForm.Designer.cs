@@ -156,7 +156,7 @@
             this.btnUninstOneDrive.Text = "Uninstall OneDrive";
             this.toolTip1.SetToolTip(this.btnUninstOneDrive, "Uninstalls OneDrive");
             this.btnUninstOneDrive.UseVisualStyleBackColor = true;
-            this.btnUninstOneDrive.Click += new System.EventHandler(this.btnUninstOneDrive_Click);
+            this.btnUninstOneDrive.Click += new System.EventHandler(this.UninstallOneDrive);
             // 
             // btnUnPhotoV
             // 
@@ -170,7 +170,7 @@
         "https://www.tenforums.com/tutorials/14312-restore-windows-photo-viewer-windows-1" +
         "0-a.html ");
             this.btnUnPhotoV.UseVisualStyleBackColor = true;
-            this.btnUnPhotoV.Click += new System.EventHandler(this.btnUnPhotoV_Click);
+            this.btnUnPhotoV.Click += new System.EventHandler(this.UninstallPhotoViewer);
             // 
             // btnUninstEdge
             // 
@@ -182,7 +182,7 @@
             this.btnUninstEdge.TabIndex = 3;
             this.btnUninstEdge.Text = "Disable \r\nEdge Browser \r\n(not recommended)\r\n";
             this.btnUninstEdge.UseVisualStyleBackColor = false;
-            this.btnUninstEdge.Click += new System.EventHandler(this.btnUninstEdge_Click);
+            this.btnUninstEdge.Click += new System.EventHandler(this.UninstallEdge);
             // 
             // btnQuickAccessDis
             // 
@@ -207,7 +207,7 @@
         "https://www.tenforums.com/tutorials/14312-restore-windows-photo-viewer-windows-1" +
         "0-a.html ");
             this.btnResPhotoV.UseVisualStyleBackColor = true;
-            this.btnResPhotoV.Click += new System.EventHandler(this.btnResPhotoV_Click);
+            this.btnResPhotoV.Click += new System.EventHandler(this.RestorePhotoViewer);
             // 
             // btnQuickAccessEn
             // 
@@ -451,7 +451,7 @@
             this.btnRefreshPriv.TabIndex = 13;
             this.btnRefreshPriv.Text = "Get Current Settings from OS";
             this.btnRefreshPriv.UseVisualStyleBackColor = true;
-            this.btnRefreshPriv.Click += new System.EventHandler(this.btnRefreshPriv_Click);
+            this.btnRefreshPriv.Click += new System.EventHandler(this.RefreshPrivacySettings);
             // 
             // label10
             // 
@@ -481,7 +481,7 @@
             this.btnSelectAll.TabIndex = 10;
             this.btnSelectAll.Text = "Deselect All";
             this.btnSelectAll.UseVisualStyleBackColor = true;
-            this.btnSelectAll.Click += new System.EventHandler(this.btnSelectAll_Click);
+            this.btnSelectAll.Click += new System.EventHandler(this.SelectAll);
             // 
             // btnApplyChanges
             // 
