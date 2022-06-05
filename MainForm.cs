@@ -1,4 +1,4 @@
-﻿/*  Windows 10 Privacy Utility
+/*  Windows 10 Privacy Utility
  *  Authors: Hailey Ferguson & Kyle Groleau
  *  Contact: kyle.groleau@outlook.com
  */
@@ -25,15 +25,11 @@ namespace WindowsFormsApp1
         PowerShell powerShell = PowerShell.Create();
         List<string> hiddenAppsList = new List<string>();
         List<string> hiddenPAppsList = new List<string>();
-        bool isAdmin = false;
 
         List<int> checkBoxList = new List<int>();
         List<string> removeAppsList = new List<string>();
         List<string> removeProvisionedList = new List<string>();
         Config xmlConfig = new Config();
-
-        static WindowsIdentity ident = WindowsIdentity.GetCurrent();
-        WindowsPrincipal principal = new WindowsPrincipal(ident);
 
         bool runOncePrivCheck = true;
 
@@ -41,20 +37,13 @@ namespace WindowsFormsApp1
         {
             InitializeComponent();
             UpdateHiddenList();
-            CheckAdmin();
-
-            for (int i = 0; i < 32; i++) checkBoxList.Add(0);
-        }
-
-        private void CheckAdmin()
-        {
-            isAdmin = principal.IsInRole(WindowsBuiltInRole.Administrator);
-
-            if (!isAdmin)
+            if (!new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator))
             {
-                foreach (Control o in ProvisionedApps.Controls) { o.Enabled = false; o.Visible = false; }
+                foreach (Control control in ProvisionedApps.Controls) { control.Enabled = false; control.Visible = false; }
                 ProvAdminWarn.Visible = true;
             }
+
+            for (int i = 0; i < 32; i++) checkBoxList.Add(0);
         }
 
         //----------------------------------------------NON-PROVISIONED APPS-----------------------------------------------------------
@@ -80,7 +69,7 @@ namespace WindowsFormsApp1
             UpdInstallCount();
         }
 
-        private void UninstallApps(object sender, EventArgs e)     //Uninstall apps in appsToRemove
+        private void UninstallApps(object sender, EventArgs e)
         {
             if (AppsToRemove.Items.Count == 0) { MessageBox.Show("No apps to uninstall"); }
             else
@@ -90,7 +79,7 @@ namespace WindowsFormsApp1
                 MessageBox.Show(RunAppUninstaller());
 
                 AppsToRemove.Items.Clear();
-                RefreshAppList(null, null);
+                RefreshAppList(sender, e);
                 Enabled = true;
             }
         }
@@ -249,8 +238,6 @@ namespace WindowsFormsApp1
             powerShell.AddCommand("get-appxProvisionedpackage").AddParameter("online");     //Collect list
             powerShell.AddCommand("Select").AddParameter("property", "displayname");        //Filter by name
 
-
-            // TODO: This definitely doesn't need to be a new powershell instance for each removal
             foreach (PSObject result in powerShell.Invoke())                                //Run the command
             {
                 string current = result.ToString();
@@ -260,8 +247,7 @@ namespace WindowsFormsApp1
             }
             string appInst = PListOfAppsInstalled.Items.ToString();
             foreach (string item in PAppsToRemove.Items) if (item.Any(appInst.Contains)) PListOfAppsInstalled.Items.Remove(item);   //if any of the items just collected exist in the apps to remove, remove them from the apps installed list
-
-            UpdateProvisionedAppCount();                                                                                                 //Update the counters
+            UpdateProvisionedAppCount();
         }
 
         private void ClearAllProvisionedApps(object sender, EventArgs e)
@@ -305,7 +291,7 @@ namespace WindowsFormsApp1
             UpdateProvisionedAppCount();
         }
 
-        private void ProvisionedUninstallClick(object sender, EventArgs e)                            // TODO: EXCEPTION THROWN WHEN REMOVING 3D.BUILDER
+        private void ProvisionedUninstallClick(object sender, EventArgs e)
         {
             if (PAppsToRemove.Items.Count == 0) { MessageBox.Show("No apps to uninstall"); }
             else
@@ -347,7 +333,7 @@ namespace WindowsFormsApp1
         }
         private void ProvisonedAppPageOpen(object sender, EventArgs e)
         {
-            if (isAdmin)
+            if (new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator))
             {
                 LoadingApps loading = new LoadingApps();
                 loading.Show();
